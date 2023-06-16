@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: kanwarsaad/frontend:v1
+          image: kanwarsaad/portfolio:v1
           ports:
             - containerPort: 3000
