@@ -3,14 +3,14 @@ name: Deploy to Ubuntu Server
 on:
   push:
     branches:
-      - master  # Change to the branch you want to trigger deployment
+      - main  # Change to the branch you want to trigger deployment
 
 env:
   SERVER_HOST: "40.90.162.68"
   SERVER_USER: "ubuntu"
-  SERVER_PASSWORD: "vconn#vconn1" 
+  SERVER_PASSWORD: "vconn#vconn1"  # ⚠️ Store this in GitHub Secrets for security
   SSH_PORT: "1780"
-  PROJECT_DIR: "/home/ubuntu"
+  PROJECT_DIR: "/home/ubuntu/portfolio"  # ✅ Ensure this is the correct Git repo path
   APP_NAME: "portfolio"
   CONTAINER_NAME: "portfolio"
   APP_PORT: "3000"
@@ -31,18 +31,28 @@ jobs:
           password: ${{ env.SERVER_PASSWORD }}
           port: ${{ env.SSH_PORT }}
           script: |
-            # Navigate to the project directory
+            # Add the user to the docker group (fix permission issue)
+            sudo usermod -aG docker $USER
+            newgrp docker
+            
+            # Navigate to the correct project directory
             cd ${{ env.PROJECT_DIR }}
 
+            # Ensure it's a valid git repository
+            if [ ! -d ".git" ]; then
+              echo "Error: Not a git repository!"
+              exit 1
+            fi
+            
             # Pull latest changes
-            git pull origin main  # Update the branch if needed
+            git pull origin main
 
             # Build Docker Image
-            docker build -t ${{ env.APP_NAME }}:latest .
+            sudo docker build -t ${{ env.APP_NAME }}:latest .
 
             # Stop and Remove Existing Container
-            docker stop ${{ env.CONTAINER_NAME }} || true
-            docker rm ${{ env.CONTAINER_NAME }} || true
+            sudo docker stop ${{ env.CONTAINER_NAME }} || true
+            sudo docker rm ${{ env.CONTAINER_NAME }} || true
 
             # Run New Container
-            docker run -d --name ${{ env.CONTAINER_NAME }} -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} ${{ env.APP_NAME }}:latest
+            sudo docker run -d --name ${{ env.CONTAINER_NAME }} -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} ${{ env.APP_NAME }}:latest
