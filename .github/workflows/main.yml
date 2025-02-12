@@ -1,0 +1,48 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches:
+      - main  # Change to the branch you want to trigger deployment
+
+env:
+  SERVER_HOST: "40.90.162.68"
+  SERVER_USER: "ubuntu"
+  SERVER_PASSWORD: "vconn#vconn1" 
+  SSH_PORT: "1780"
+  PROJECT_DIR: "/home/ubuntu"
+  APP_NAME: "portfolio"
+  CONTAINER_NAME: "portfolio"
+  APP_PORT: "3000"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          password: ${{ env.SERVER_PASSWORD }}
+          port: ${{ env.SSH_PORT }}
+          script: |
+            # Navigate to the project directory
+            cd ${{ env.PROJECT_DIR }}
+
+            # Pull latest changes
+            git pull origin main  # Update the branch if needed
+
+            # Build Docker Image
+            docker build -t ${{ env.APP_NAME }}:latest .
+
+            # Stop and Remove Existing Container
+            docker stop ${{ env.CONTAINER_NAME }} || true
+            docker rm ${{ env.CONTAINER_NAME }} || true
+
+            # Run New Container
+            docker run -d --name ${{ env.CONTAINER_NAME }} -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} ${{ env.APP_NAME }}:latest
